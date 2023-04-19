@@ -14,6 +14,20 @@ impl ThreadPool {
         Self
     }
 
+    /// Create a new ThreadPool.
+    ///
+    /// This behavior is the same with the `new` function
+    ///
+    /// Except that the `build` function consider a case where the size is zero
+    ///
+    /// as a recoverable error.
+    pub fn build(size: usize) -> Result<ThreadPool, PoolCreationError> {
+        if size == 0 {
+            return Err(PoolCreationError);
+        }
+        Ok(Self)
+    }
+
     pub fn execute<F>(&self, f: F)
     where
         F: FnOnce() + 'static + Send,
