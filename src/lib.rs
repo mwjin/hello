@@ -1,4 +1,7 @@
-use std::{sync::mpsc, thread};
+use std::{
+    sync::{mpsc, Arc, Mutex},
+    thread,
+};
 
 pub struct PoolCreationError;
 
@@ -22,6 +25,8 @@ impl ThreadPool {
 
         let (sender, receiver) = mpsc::channel();
 
+        let receiver = Arc::new(Mutex::new(receiver));
+
         Self {
             workers: Worker::create_workers(size, receiver),
             sender,
@@ -40,6 +45,8 @@ impl ThreadPool {
             return Err(PoolCreationError);
         }
         let (sender, receiver) = mpsc::channel();
+
+        let receiver = Arc::new(Mutex::new(receiver));
 
         Ok(Self {
             workers: Worker::create_workers(size, receiver),
@@ -60,7 +67,7 @@ struct Worker {
 }
 
 impl Worker {
-    fn new(id: usize, receiver: mpsc::Receiver<Job>) -> Worker {
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
         Self {
             id,
             thread: thread::spawn(|| {
@@ -69,11 +76,11 @@ impl Worker {
         }
     }
 
-    fn create_workers(size: usize, receiver: mpsc::Receiver<Job>) -> Vec<Self> {
+    fn create_workers(size: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Vec<Self> {
         let mut result = Vec::with_capacity(size);
 
         for id in 0..size {
-            result.push(Worker::new(id, receiver));
+            result.push(Worker::new(id, Arc::clone(&receiver)));
         }
 
         result
