@@ -23,7 +23,7 @@ impl ThreadPool {
         let (sender, receiver) = mpsc::channel();
 
         Self {
-            workers: Worker::create_workers(size),
+            workers: Worker::create_workers(size, receiver),
             sender,
         }
     }
@@ -42,7 +42,7 @@ impl ThreadPool {
         let (sender, receiver) = mpsc::channel();
 
         Ok(Self {
-            workers: Worker::create_workers(size),
+            workers: Worker::create_workers(size, receiver),
             sender,
         })
     }
@@ -60,18 +60,20 @@ struct Worker {
 }
 
 impl Worker {
-    fn new(id: usize) -> Worker {
+    fn new(id: usize, receiver: mpsc::Receiver<Job>) -> Worker {
         Self {
             id,
-            thread: thread::spawn(|| {}),
+            thread: thread::spawn(|| {
+                receiver;
+            }),
         }
     }
 
-    fn create_workers(size: usize) -> Vec<Self> {
+    fn create_workers(size: usize, receiver: mpsc::Receiver<Job>) -> Vec<Self> {
         let mut result = Vec::with_capacity(size);
 
         for id in 0..size {
-            result.push(Worker::new(id));
+            result.push(Worker::new(id, receiver));
         }
 
         result
