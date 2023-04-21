@@ -1,10 +1,13 @@
-use std::thread;
+use std::{sync::mpsc, thread};
 
 pub struct PoolCreationError;
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
+    sender: mpsc::Sender<Job>,
 }
+
+struct Job;
 
 impl ThreadPool {
     /// Create a new ThreadPool.
@@ -17,8 +20,11 @@ impl ThreadPool {
     pub fn new(size: usize) -> ThreadPool {
         assert!(size > 0);
 
+        let (sender, receiver) = mpsc::channel();
+
         Self {
             workers: Worker::create_workers(size),
+            sender,
         }
     }
 
@@ -33,8 +39,11 @@ impl ThreadPool {
         if size == 0 {
             return Err(PoolCreationError);
         }
+        let (sender, receiver) = mpsc::channel();
+
         Ok(Self {
             workers: Worker::create_workers(size),
+            sender,
         })
     }
 
