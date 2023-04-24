@@ -86,11 +86,18 @@ impl Worker {
         Self {
             id,
             thread: Some(thread::spawn(move || loop {
-                let job = receiver.lock().unwrap().recv().unwrap();
+                let message = receiver.lock().unwrap().recv();
 
-                println!("Worker {id} got a job; executing.");
-
-                job();
+                match message {
+                    Ok(job) => {
+                        println!("Worker {id} got a job; executing.");
+                        job();
+                    }
+                    Err(_) => {
+                        println!("Worker {id} disconnected; shutting down.");
+                        break;
+                    }
+                }
             })),
         }
     }
