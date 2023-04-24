@@ -7,7 +7,7 @@ pub struct PoolCreationError;
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
-    sender: mpsc::Sender<Job>,
+    sender: Option<mpsc::Sender<Job>>,
 }
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
@@ -29,7 +29,7 @@ impl ThreadPool {
 
         Self {
             workers: Worker::create_workers(size, receiver),
-            sender,
+            sender: Some(sender),
         }
     }
 
@@ -50,7 +50,7 @@ impl ThreadPool {
 
         Ok(Self {
             workers: Worker::create_workers(size, receiver),
-            sender,
+            sender: Some(sender),
         })
     }
 
@@ -59,12 +59,14 @@ impl ThreadPool {
         F: FnOnce() + 'static + Send,
     {
         let job = Box::new(f);
-        self.sender.send(job).unwrap();
+        self.sender.as_ref().unwrap().send(job).unwrap();
     }
 }
 
 impl Drop for ThreadPool {
     fn drop(&mut self) {
+        drop(self.sender.take());
+
         for worker in &mut self.workers {
             println!("Shutting down worker {}", worker.id);
             if let Some(thread) = worker.thread.take() {
